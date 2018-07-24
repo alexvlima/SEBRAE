@@ -1,0 +1,23 @@
+setwd("D:/Análise dos Atendimentos em R")
+
+if(!require(googleVis)) install.packages('googleVis')
+if(!require(readxl)) install.packages('readxl')
+
+require(googleVis)
+library(readxl) 
+
+Atd_por_dia <- read_excel('Qtde_Atendimento_por_Dia.xlsx')
+
+Atd <- gvisCalendar(Atd_por_dia, 
+                    datevar="Data", 
+                    numvar="Qtde_Atendimento",
+                    options=list(
+                      title="Qtde de Atendimento por Dia",
+                      height=600,
+                      calendar="{yearLabel: { fontName: 'Times-Roman',
+                      fontSize: 32, color: '#1A8763', bold: true},
+                      cellSize: 10,
+                      cellColor: { stroke: 'red', strokeOpacity: 0.5 },
+                      focusedCellColor: {stroke:'red'}}")
+                    )
+plot(Atd)
