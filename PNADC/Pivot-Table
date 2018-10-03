@@ -1,0 +1,42 @@
+
+library(rpivotTable)
+library(shiny)
+library(tidyverse) 
+
+getwd()
+setwd("/Users/alexvlima/Downloads")
+
+list.files()
+
+base <- read.table(file = "20181003-Base.txt", header = T, sep = "\t")
+glimpse(base)
+
+change_locale(rpivotTable(base),"pt")
+
+ui = shinyUI(fluidPage(
+  fluidRow( rpivotTableOutput("teste")
+  )))
+
+server = function(input, output, session) {
+  # reactive({
+  #   base %>%  
+  #     summarise(n=sum(V1028)) -> pnadc
+  # })  
+  
+  output$teste <- renderRpivotTable({
+    change_locale(
+      rpivotTable(
+        data = base, 
+        rows = "UF",
+        cols="trimestre_ano",
+        vals = "V1028", 
+        aggregatorName = "Soma como Fra\u00e7\u00e3o do Total", 
+        rendererName = "Tabela",
+        width="100%", 
+        height="400px"),
+        "pt")
+  })
+  
+}
+
+shinyApp(ui = ui, server = server)
