@@ -11,8 +11,6 @@ list.files()
 base <- read.table(file = "20181003-Base.txt", header = T, sep = "\t")
 glimpse(base)
 
-change_locale(rpivotTable(base),"pt")
-
 ui = shinyUI(fluidPage(
   fluidRow( rpivotTableOutput("teste")
   )))
