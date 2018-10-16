@@ -1,15 +1,20 @@
+#################
+### LIBRARIES ###
+#################
 
 library(rpivotTable)
 library(shiny)
-library(tidyverse) 
 
-getwd()
-setwd("/Users/alexvlima/Downloads")
-
-list.files()
+###############
+### DATASET ###
+###############
 
 base <- read.table(file = "20181003-Base.txt", header = T, sep = "\t")
 glimpse(base)
+
+#################
+### SHINY APP ###
+#################
 
 ui = shinyUI(fluidPage(
   fluidRow( rpivotTableOutput("teste")
