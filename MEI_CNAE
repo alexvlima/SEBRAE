@@ -1,0 +1,47 @@
+getwd()
+setwd("/Users/alexandre.lima/Downloads/")
+
+list.files()
+
+options(scipen = 14)
+
+library(tidyverse)
+
+rm(list = ls())
+
+df <- read.csv("EstatisticasSinac.csv", stringsAsFactors = F)
+glimpse(df)
+
+n <- nrow(df)
+df <- df[1:(n-1), 1:2]
+
+
+source("/Users/alexandre.lima/Documents/Scripts/R/proxy_sebrae.R")
+
+
+# API IBGE #
+# CONCLA #
+
+api_subclasses <- httr::GET("https://servicodados.ibge.gov.br/api/v2/cnae/subclasses")
+parsed <- jsonlite::fromJSON(content(api_subclasses, "text"), simplifyVector = TRUE)
+
+subclasse_id <- as.data.frame(unique(parsed$id),stringsAsFactors = F)
+subclasse_id$`unique(parsed$id)` <- as.numeric(subclasse_id$`unique(parsed$id)`)
+subclasse_descr <- as.data.frame(unique(parsed$descricao), stringsAsFactors = F)
+
+subclasses <- data.frame(subclasse_id,subclasse_descr)
+colnames(subclasses) <- c("id","cnae_desc")
+
+rm(n, api_subclasses, parsed, subclasse_id, subclasse_descr)
+
+
+df$Codigo <- as.numeric(df$Codigo)
+
+mei <- 
+  df %>% 
+  left_join(subclasses, by = c("Codigo" = "id")) %>%
+  group_by(Codigo, cnae_desc) %>%
+  summarise(total = sum(Total)) %>%
+  arrange(desc(total))
+
+write.csv2(mei, "estatistica-mei.csv", row.names = F)
