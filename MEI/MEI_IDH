@@ -1,0 +1,148 @@
+#################
+### LIBRARIES ###
+#################
+
+local({r <- getOption("repos")
+r["CRAN"] <- "http://cran.r-project.org" 
+options(repos=r)})
+
+library(RODBC)
+library(tidyverse)
+library(abjData)
+library(corrplot)
+library(dgof)
+library(brazilmaps)
+library(gridExtra)
+
+rm(list = ls())
+
+con <- odbcDriverConnect(connection = "driver={SQL Server Native Client 11.0};
+                          server=10.33.0.11; database=Receita_Federal; trusted_connection=yes")
+
+statement <- 
+  "SELECT  [mun_cod_ibge], COUNT(*) as	qtde
+  FROM [Receita_Federal].[dbo].[20190719_indicadores_acordogestao_mei]
+  LEFT JOIN [Receita_Federal].[dbo].[cod_mun] 
+   ON END_MUNICIPIO_COD_INT = mun_cod_serpro
+  WHERE SIT_CADASTRAL = '02' AND OPCAO_MEI = 'S'
+  GROUP BY
+  [mun_cod_ibge]"
+
+df <- sqlQuery(con, statement)
+glimpse(df)
+
+close(con)
+
+pnud_idh <- 
+  abjData::pnud_muni %>%
+  filter(ano == 2010) %>%
+  select(cod_uf = uf, 
+         cod_mun = codmun7,
+         starts_with("idh"))
+glimpse(pnud_idh)
+
+
+df <- 
+  df %>% 
+  left_join(pnud_idh, by = c("mun_cod_ibge" = "cod_mun"))
+
+
+ks.test(df$qtde,y='pnorm',alternative='two.sided')
+
+df %>%
+  select(qtde, starts_with("idhm")) %>%
+  cor(use = "pairwise.complete.obs", method = "spearman") %>%
+  corrplot()
+
+df <- 
+  df %>%
+  left_join(pop2017, by = c("mun_cod_ibge" = "mun"))
+glimpse(df)
+
+df <- 
+  df %>%
+  mutate(mei_hab = qtde / pop2017 * 1000) 
+summary(df)
+
+mapas <- 
+  get_brmap("City") %>%
+  left_join(df, by = c("City" = "mun_cod_ibge"))
+glimpse(mapas)
+
+mapa_idh <-
+  mapas %>% 
+  mutate(idhm = cut(idhm, c(0, 0.5, 0.6, 0.75, 1.0))) %>% 
+  ggplot() +
+  geom_sf(aes(fill = idhm), 
+          # ajusta tamanho das linhas
+          colour = "black", size = 0.1) +
+  geom_sf(data = get_brmap("State"),
+          fill = "transparent",
+          colour = "black", size = 0.5) +
+  # muda escala de cores
+  scale_fill_viridis_d(option = 2, begin = 0.2, end = 0.8) +
+  # tira sistema cartesiano
+  theme(panel.grid = element_line(colour = "transparent"),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+mapa_idh_r <-
+  mapas %>% 
+  mutate(idhm_r = cut(idhm_r, c(0, 0.5720, 0.6540, 0.7070, 0.8910))) %>% 
+  ggplot() +
+  geom_sf(aes(fill = idhm_r), 
+          # ajusta tamanho das linhas
+          colour = "black", size = 0.1) +
+  geom_sf(data = get_brmap("State"),
+          fill = "transparent",
+          colour = "black", size = 0.5) +
+  # muda escala de cores
+  scale_fill_viridis_d(option = 2, begin = 0.2, end = 0.8) +
+  # tira sistema cartesiano
+  theme(panel.grid = element_line(colour = "transparent"),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+mapa_mei <- 
+  mapas %>% 
+  mutate(qtde_mei = cut(qtde, c(0, 122, 272, 738, 683507))) %>% 
+  ggplot() +
+  geom_sf(aes(fill = qtde_mei), 
+          # ajusta tamanho das linhas
+          colour = "black", size = 0.1) +
+  geom_sf(data = get_brmap("State"),
+          fill = "transparent",
+          colour = "black", size = 0.5) +
+  # muda escala de cores
+  scale_fill_viridis_d(option = 2, begin = 0.2, end = 0.8) +
+  # tira sistema cartesiano
+  theme(panel.grid = element_line(colour = "transparent"),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+
+grid.arrange(mapa_idh, mapa_mei, ncol=2)
+
+mapa_mei_hab <- 
+  mapas %>% 
+  mutate(mei_hab = cut(mei_hab, c(0, 16.233, 29.405, 43.002 , 167.619 ))) %>% 
+  ggplot() +
+  geom_sf(aes(fill = mei_hab), 
+          # ajusta tamanho das linhas
+          colour = "black", size = 0.1) +
+  geom_sf(data = get_brmap("State"),
+          fill = "transparent",
+          colour = "black", size = 0.5) +
+  # muda escala de cores
+  scale_fill_viridis_d(option = 2, begin = 0.2, end = 0.8) +
+  # tira sistema cartesiano
+  theme(panel.grid = element_line(colour = "transparent"),
+        panel.background = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+
+grid.arrange(mapa_idh, mapa_mei_hab, ncol=2)
+grid.arrange(mapa_idh_r, mapa_mei_hab, ncol=2)
