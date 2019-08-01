@@ -1,0 +1,73 @@
+############
+### PATH ###
+############
+
+getwd()
+setwd("../Downloads/")
+
+#################
+### LIBRARIES ###
+#################
+
+library(readODS)    
+library(tidyverse)
+library(reshape2)
+
+################
+### FUNCTION ###
+################
+
+read_ods_allsheets <- function(filename) {
+  sheets <- readODS::ods_sheets(filename)
+  x <- lapply(sheets, function(X)readODS::read_ods(filename, sheet = X, skip = 1, na = c('#DIV/0!', '', 'NA')))
+  x <- lapply(x, as.data.frame)
+  names(x) <- sheets
+  x
+}
+
+###############
+### DATASET ###
+###############
+
+# rm(list = ls())
+# dev.off()
+
+url <- "http://www8.receita.fazenda.gov.br/SimplesNacional/Arquivos/estatisticaArrecadacao/%C3%8Dndice%20Inadimpl%C3%AAncia%20MEI%2005.2019.ods"
+
+download.file(url = url, destfile = "inadimplencia_mei.ods", method = "wininet", mode = "wb")
+
+list.files()
+
+mysheets <- read_ods_allsheets("inadimplencia_mei.ods")
+glimpse(mysheets)
+
+#################
+### WRANGLING ###
+#################
+
+nomes <- names(mysheets)
+
+TEMP <- setNames(mysheets, nomes)
+glimpse(TEMP)
+
+TEMP_2 <- 
+  melt(setNames(mysheets,nomes)) %>%
+  select(`Municípios/UF`,variable, value, L1) %>%
+  filter(variable == "Inadimplência") 
+
+TEMP_2$variable <- as.character(TEMP_2$variable)
+colnames(TEMP_2) <- c("Municipio","Indicador","Valor","Data")
+glimpse(TEMP_2)
+
+UF <- c("AC","AM","AP","RO","PA","RR","TO",
+        "AL","BA","CE","MA","PB","PE","PI","RN","SE",
+        "DF","GO","MS","MT",
+        "ES","MG","RJ","SP",
+        "PR","RS","SC")
+length(UF)
+
+MEI_MUNIC_INADIMP <-
+  TEMP_2 %>%
+  filter(!Municipio %in% UF, Municipio != "Total Geral",Indicador == "Inadimplência", Data == "Maio 2019") %>%
+  select(-Data, -Indicador, Inadimplencia = Valor)
+glimpse(MEI_MUNIC_INADIMP)
